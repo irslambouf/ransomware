@@ -18,15 +18,15 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Crypto.cpp">
+    <ClCompile Include="AESCrypto.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Crypto.h">
+    <ClInclude Include="concurrentqueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="concurrentqueue.h">
+    <ClInclude Include="AESCrypto.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

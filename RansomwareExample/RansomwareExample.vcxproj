@@ -123,12 +123,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Crypto.cpp" />
+    <ClCompile Include="AESCrypto.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="concurrentqueue.h" />
-    <ClInclude Include="Crypto.h" />
+    <ClInclude Include="AESCrypto.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
