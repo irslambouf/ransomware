@@ -21,12 +21,18 @@
     <ClCompile Include="AESCrypto.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RSACrypto.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="concurrentqueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AESCrypto.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RSACrypto.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

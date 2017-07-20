@@ -3,7 +3,6 @@
 #include <openssl/rand.h>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
-#include <openssl/rsa.h>
 
 #include <iostream>
 
@@ -30,7 +29,7 @@ int AESCrypto::encrypt(std::ifstream& in, std::ofstream& out, unsigned char* tag
 		std::cout << "Error generating iv bytes" << std::endl;
 		return 0;
 	}
-	
+
 	EVP_CIPHER_CTX *ctx;
 	unsigned char in_buffer[AES_BLOCK_SIZE]; // AES_BLOCK_SIZE = 16
 	unsigned char out_buffer[AES_BLOCK_SIZE];
@@ -55,15 +54,24 @@ int AESCrypto::encrypt(std::ifstream& in, std::ofstream& out, unsigned char* tag
 	/* Write IV to file */
 	out.write((const char *)aes_iv, sizeof(aes_iv));
 
+	bool flag = true;
 	while (!in.eof()) {
 		in.read((char *)in_buffer, AES_BLOCK_SIZE);
 		int read_bytes = in.gcount();
-
-		/* Encrypt plaintext */
-		if (!EVP_EncryptUpdate(ctx, out_buffer, &len, in_buffer, read_bytes)) {
-			return -1;
+		if (flag) {
+			/* Encrypt plaintext */
+			if (!EVP_EncryptUpdate(ctx, out_buffer, &len, in_buffer, read_bytes)) {
+				return -1;
+			}
+			ciphertext_len += len;
+			flag = false;
 		}
-		ciphertext_len += len;
+		else {
+			memcpy(out_buffer, in_buffer, read_bytes);
+			len = read_bytes;
+			flag = true;
+		}
+
 		out.write((const char *)out_buffer, len);
 	}
 	if (!EVP_EncryptFinal_ex(ctx, out_buffer, &len)) {
@@ -111,16 +119,24 @@ int AESCrypto::decrypt(std::ifstream& in, std::ofstream& out, unsigned char* tag
 	if (!EVP_DecryptInit_ex(ctx, NULL, NULL, aes_key, iv_buffer)) {
 		return -1;
 	}
-
+	bool flag = true;
 	while (!in.eof()) {
 		in.read((char *)in_buffer, AES_BLOCK_SIZE);
 		int read_bytes = in.gcount();
-
-		/* Decrypt plaintext */
-		if (!EVP_DecryptUpdate(ctx, out_buffer, &len, in_buffer, read_bytes)) {
-			return -1;
+		if (flag) {
+			/* Decrypt plaintext */
+			if (!EVP_DecryptUpdate(ctx, out_buffer, &len, in_buffer, read_bytes)) {
+				return -1;
+			}
+			plaintext_len += len;
+			flag = false;
 		}
-		plaintext_len += len;
+		else {
+			memcpy(out_buffer, in_buffer, read_bytes);
+			len = read_bytes;
+			flag = true;
+		}
+
 		out.write((const char *)out_buffer, len);
 	}
 
