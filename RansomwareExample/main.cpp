@@ -41,13 +41,17 @@ void consume(consumer_bundle& bundle, const int& consumer_id);
 int main(int argc, char* argv[]) {
 	AESCrypto *aes = new AESCrypto();
 	unsigned char tag[16];
-	std::ifstream in_enc(L"C:\\test\\test.jpg", ios::binary);
+	/*std::ifstream in_enc(L"C:\\test\\test.jpg", ios::binary);
 	std::ofstream out_enc(L"C:\\test\\test.enc", ios::binary);
 
 	std::ifstream in_dec(L"C:\\test\\test.enc", ios::binary);
 	std::ofstream out_dec(L"C:\\test\\testdec.jpg", ios::binary);
 	aes->encrypt(in_enc, out_enc, tag);
-	aes->decrypt(in_dec, out_dec, tag);
+	aes->decrypt(in_dec, out_dec, tag);*/
+	std::fstream file_enc(L"C:\\test\\test.txt", ios::binary | ios::in | ios::out);
+	wstring path = L"C:\\test\\test.txt";
+	aes->in_place_encrypt(path, tag);
+
 
 	moodycamel::ConcurrentQueue<wstring> queue;
 	moodycamel::ProducerToken ptok(queue);

@@ -11,6 +11,8 @@ public:
 	virtual ~AESCrypto();
 	int encrypt(std::ifstream& in, std::ofstream& out, unsigned char* tag);
 	int decrypt(std::ifstream& in, std::ofstream& out, unsigned char* tag);
+	int in_place_encrypt(std::wstring& path, unsigned char* tag);
+	int in_place_decrypt(std::wstring& path, unsigned char* tag);
 	void get_aes_key(unsigned char * dest);
 private:
 	unsigned char aes_key[32];
