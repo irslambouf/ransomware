@@ -48,10 +48,9 @@ int main(int argc, char* argv[]) {
 	std::ofstream out_dec(L"C:\\test\\testdec.jpg", ios::binary);
 	aes->encrypt(in_enc, out_enc, tag);
 	aes->decrypt(in_dec, out_dec, tag);*/
-	std::fstream file_enc(L"C:\\test\\test.txt", ios::binary | ios::in | ios::out);
 	wstring path = L"C:\\test\\test.txt";
-	aes->in_place_encrypt(path, tag);
-
+	int encrypted_bytes = aes->in_place_encrypt(path, tag);
+	int decrypted_bytes = aes->in_place_decrypt(path, tag);
 
 	moodycamel::ConcurrentQueue<wstring> queue;
 	moodycamel::ProducerToken ptok(queue);
