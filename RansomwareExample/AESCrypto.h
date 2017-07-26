@@ -16,7 +16,6 @@ public:
 	void get_aes_key(unsigned char * dest);
 private:
 	unsigned char aes_key[32];
-	
 };
 
 #endif /* CRYPTO_H */

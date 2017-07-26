@@ -193,15 +193,15 @@ int AESCrypto::in_place_encrypt(std::wstring& path, unsigned char * tag) {
 		return -1;
 	}
 	/* Set cipher type and mode */
-	if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+	if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
 		return -1;
 	}
 	/* Set IV length to 128 bit */
-	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, sizeof(aes_iv), NULL)) {
+	if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, sizeof(aes_iv), NULL)) {
 		return -1;
 	}
 	/* Initialize key and IV */
-	if (!EVP_EncryptInit_ex(ctx, NULL, NULL, aes_key, aes_iv)) {
+	if (1 != EVP_EncryptInit_ex(ctx, NULL, NULL, aes_key, aes_iv)) {
 		return -1;
 	}
 		
@@ -212,7 +212,7 @@ int AESCrypto::in_place_encrypt(std::wstring& path, unsigned char * tag) {
 			int read_bytes = file.gcount();
 
 			/* Encrypt plaintext */
-			if (!EVP_EncryptUpdate(ctx, out_buffer, &len, in_buffer, read_bytes)) {
+			if (1 != EVP_EncryptUpdate(ctx, out_buffer, &len, in_buffer, read_bytes)) {
 				return -1;
 			}
 			ciphertext_len += len;
@@ -238,13 +238,13 @@ int AESCrypto::in_place_encrypt(std::wstring& path, unsigned char * tag) {
 		}
 	}
 
-	if (!EVP_EncryptFinal_ex(ctx, out_buffer, &len)) {
+	if (1 != EVP_EncryptFinal_ex(ctx, out_buffer, &len)) {
 		return -1;
 	}
 	ciphertext_len += len;
 
 	/* Get tag value */
-	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag)) {
+	if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag)) {
 		return -1;
 	}
 

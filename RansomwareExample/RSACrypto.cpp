@@ -1,12 +1,11 @@
 #include <iostream>
 #include <openssl\bn.h>
+#include <openssl\rsa.h>
 
 #include "RSACrypto.h"
 
 RSACrypto::RSACrypto()
 {	
-	cb = BN_GENCB_new();
-
 	bn = BN_new();
 	if (!BN_set_word(bn, RSA_F4)) {
 		std::cout << "Failed to assign the exponent, stopping" << std::endl;
@@ -14,7 +13,7 @@ RSACrypto::RSACrypto()
 	}
 
 	rsa = RSA_new();
-	if (!RSA_generate_key_ex(rsa, bit_size, bn, cb)) {
+	if (!RSA_generate_key_ex(rsa, bit_size, bn, NULL)) {
 		std::cout << "Failed to generate key pair, stopping" << std::endl;
 		free_all();
 	}
@@ -27,8 +26,15 @@ RSACrypto::~RSACrypto()
 
 void RSACrypto::free_all() {
 	BN_free(bn);
-	BN_GENCB_free(cb);
 	RSA_free(rsa);
-	BIO_free_all(bp_public);
-	BIO_free_all(bp_private);
+}
+
+int RSACrypto::encrypt_key(std::wstring& path, const unsigned char * key) {
+	unsigned char * out_buffer = new unsigned char[RSA_size(rsa)];
+	int result;
+
+}
+
+int RSACrypto::decrypt_key(std::wstring& path, const unsigned char * key) {
+
 }

