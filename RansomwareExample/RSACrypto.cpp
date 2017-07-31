@@ -3,6 +3,8 @@
 #include <openssl\bn.h>
 #include <openssl\rsa.h>
 
+#include <boost\filesystem.hpp>
+
 #include "RSACrypto.h"
 
 RSACrypto::RSACrypto()
@@ -37,7 +39,11 @@ int RSACrypto::encrypt_key(std::wstring& out_path, const unsigned char * from, i
 	int size = RSA_size(rsa);
 	ciphertext_len = RSA_public_encrypt(length, from, buffer, rsa, RSA_PKCS1_PADDING);
 	
-	std::ofstream out_file (out_path, std::ios::binary);
+	std::ofstream out_file;
+	out_file.open(out_path, std::ios::binary | std::ios::out);
+	if (!out_file.is_open()) {
+		printf("File is NOT open");
+	}
 	out_file.write((const char *)buffer, RSA_size(rsa));
 	out_file.flush();
 	out_file.close();
@@ -54,6 +60,7 @@ int RSACrypto::decrypt_key(std::wstring& key_path, unsigned char * to) {
 	file.read((char *)enc_buffer, RSA_size(rsa));	// Read data from file
 	file.close();
 
+	boost::filesystem::remove(key_path);	// Delete file
 	int plaintext_len;
 	plaintext_len = RSA_private_decrypt(RSA_size(rsa), enc_buffer, to, rsa, RSA_PKCS1_PADDING);
 
