@@ -29,7 +29,7 @@ int AESCrypto::encrypt(std::ifstream& in, std::ofstream& out, unsigned char* tag
 	unsigned char aes_iv[AES_BLOCK_SIZE];	// AES_BLOCK_SIZE = 16
 	if (!RAND_bytes(aes_iv, sizeof(aes_iv))) {
 		std::cout << "Error generating iv bytes" << std::endl;
-		return 0;
+		return -1;
 	}
 
 	EVP_CIPHER_CTX *ctx;

