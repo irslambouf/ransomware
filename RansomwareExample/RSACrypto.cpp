@@ -22,9 +22,12 @@ RSACrypto::RSACrypto()
 	}
 }
 
+RSACrypto::RSACrypto(RSA* rsa) {
+	this->rsa = rsa;
+}
+
 RSACrypto::~RSACrypto()
 {
-	free_all();
 }
 
 void RSACrypto::free_all() {
@@ -40,10 +43,7 @@ int RSACrypto::encrypt_key(std::wstring& out_path, const unsigned char * from, i
 	ciphertext_len = RSA_public_encrypt(length, from, buffer, rsa, RSA_PKCS1_PADDING);
 	
 	std::ofstream out_file;
-	out_file.open(out_path, std::ios::binary | std::ios::out);
-	if (!out_file.is_open()) {
-		printf("File is NOT open");
-	}
+	out_file.open(out_path, std::ios::binary | std::ios::out);	// Force file creation
 	out_file.write((const char *)buffer, RSA_size(rsa));
 	out_file.flush();
 	out_file.close();
@@ -64,5 +64,12 @@ int RSACrypto::decrypt_key(std::wstring& key_path, unsigned char * to) {
 	int plaintext_len;
 	plaintext_len = RSA_private_decrypt(RSA_size(rsa), enc_buffer, to, rsa, RSA_PKCS1_PADDING);
 
+	delete enc_buffer;
+	enc_buffer = NULL;
+
 	return plaintext_len;
+}
+
+RSA* RSACrypto::get_rsa() {
+	return rsa;
 }
