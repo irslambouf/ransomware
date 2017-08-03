@@ -172,15 +172,15 @@ int AESCrypto::in_place_encrypt(std::wstring& path, unsigned char * tag) {
 	std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
 
 	if (!file.is_open()) {
-		printf("Can't open file, returning");
+		printf("Can't open file, returning...\n");
 		return -1;
 	}
 
 	// Generate IV
 	unsigned char aes_iv[AES_BLOCK_SIZE];	// AES_BLOCK_SIZE = 16
 	if (!RAND_bytes(aes_iv, sizeof(aes_iv))) {
-		std::cout << "Error generating iv bytes" << std::endl;
-		return 0;
+		printf("Can't generate IV bytes, returning...\n");
+		return -1;
 	}
 	
 	EVP_CIPHER_CTX *ctx;
@@ -265,7 +265,7 @@ int AESCrypto::in_place_decrypt(std::wstring& path, unsigned char* tag) {
 	std::fstream file(path, std::ios::binary | std::ios::in);
 
 	if (!file.is_open()) {
-		printf("Can't open file, returning");
+		printf("Can't open file, returning...\n");
 		return -1;
 	}
 
