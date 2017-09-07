@@ -49,7 +49,8 @@ Build Boost static linked lib
 1. Download from http://www.boost.org/users/download/        (Im using 1.64)
 2. extract folder
 3. open `visual studio 2017 command line x64 build tool`
-4. navigate to `boost` folder
+4. navigate to `(Boost folder)\tools\build\` folder
+5. Run `bootstrap.bat`
 ```
 .\b2 -q -j4 toolset=msvc-14.1 address-model=64 architecture=x86 link=static runtime-link=static
 ```
