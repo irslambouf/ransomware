@@ -53,11 +53,11 @@ Build Boost static linked lib
 5. Run `bootstrap.bat`
 6. Run the b2 command below
 ```
-.\b2 -q -with-filesystem -j4 toolset=msvc-14.1 address-model=64 architecture=x86 link=static runtime-link=static
+.\b2 -q -j4 --with-filesystem --with-system toolset=msvc-14.1 address-model=64 architecture=x86 link=static runtime-link=static
 ```
 > -q Stop when at first error
 
-> -with-filesystem will only build the filesystem library
+> -with-{library name}  will only build the libraries listed with this
 
 > -j4 Use 4 cores to build
 
