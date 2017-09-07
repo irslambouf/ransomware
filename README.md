@@ -51,10 +51,13 @@ Build Boost static linked lib
 3. open `visual studio 2017 command line x64 build tool`
 4. navigate to `(Boost folder)\tools\build\` folder
 5. Run `bootstrap.bat`
+6. Run the b2 command below
 ```
-.\b2 -q -j4 toolset=msvc-14.1 address-model=64 architecture=x86 link=static runtime-link=static
+.\b2 -q -with-filesystem -j4 toolset=msvc-14.1 address-model=64 architecture=x86 link=static runtime-link=static
 ```
 > -q Stop when at first error
+
+> -with-filesystem will only build the filesystem library
 
 > -j4 Use 4 cores to build
 
