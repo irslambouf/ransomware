@@ -49,7 +49,7 @@ Build Boost static linked lib
 1. Download from http://www.boost.org/users/download/        (Im using 1.64)
 2. extract folder
 3. open `visual studio 2017 command line x64 build tool`
-4. navigate to `(Boost folder)\tools\build\` folder
+4. navigate to `Boost` folder
 5. Run `bootstrap.bat`
 6. Run the b2 command below
 ```
