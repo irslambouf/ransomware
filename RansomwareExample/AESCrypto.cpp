@@ -1,8 +1,8 @@
 #include "AESCrypto.h"
 
-#include <openssl/rand.h>
-#include <openssl/aes.h>
-#include <openssl/evp.h>
+#include <openssl\rand.h>
+#include <openssl\aes.h>
+#include <openssl\evp.h>
 
 #include <boost\filesystem.hpp>
 

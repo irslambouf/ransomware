@@ -20,6 +20,13 @@
 using namespace std;
 using namespace boost::filesystem;
 
+#define MUTEX_TYPE            HANDLE
+#define MUTEX_SETUP(x)        (x) = CreateMutex(NULL, FALSE, NULL)
+#define MUTEX_CLEANUP(x)      CloseHandle(x)
+#define MUTEX_LOCK(x)         WaitForSingleObject((x), INFINITE)
+#define MUTEX_UNLOCK(x)       ReleaseMutex(x)
+#define THREAD_ID             GetCurrentThreadId()
+
 struct p_producer_bundle {
 	moodycamel::ConcurrentQueue<wstring>& q;
 	moodycamel::ProducerToken& p;
@@ -80,7 +87,53 @@ void dec_path_consumer_thread(dec_p_cons_bundle& p_bundle);
 void do_encryption();
 void do_decryption();
 
+/* This array will store all of the mutexes available to OpenSSL. */
+static MUTEX_TYPE *mutex_buf = NULL;
+
+static void locking_function(int mode, int n, const char * file, int line)
+{
+	if (mode & CRYPTO_LOCK)
+		MUTEX_LOCK(mutex_buf[n]);
+	else
+		MUTEX_UNLOCK(mutex_buf[n]);
+}
+
+
+static unsigned long id_function(void)
+{
+	return ((unsigned long)THREAD_ID);
+}
+
+int thread_setup(void)
+{
+	int i;
+
+	mutex_buf = (HANDLE *)malloc(CRYPTO_num_locks() * sizeof(MUTEX_TYPE));
+	if (!mutex_buf)
+		return 0;
+	for (i = 0; i < CRYPTO_num_locks(); i++)
+		MUTEX_SETUP(mutex_buf[i]);
+	CRYPTO_set_id_callback(id_function);
+	CRYPTO_set_locking_callback(locking_function);
+	return 1;
+}
+
+int thread_cleanup(void)
+{
+	int i;
+	if (!mutex_buf)
+		return 0;
+	CRYPTO_set_id_callback(NULL);
+	CRYPTO_set_locking_callback(NULL);
+	for (i = 0; i < CRYPTO_num_locks(); i++)
+		MUTEX_CLEANUP(mutex_buf[i]);
+	free(mutex_buf);
+	mutex_buf = NULL;
+	return 1;
+}
+
 int main(int argc, char* argv[]) {
+	thread_setup();
 	try {
 		do_encryption();
 		do_decryption();
@@ -88,6 +141,7 @@ int main(int argc, char* argv[]) {
 	catch (...) {
 		cout << GetLastError() << endl;
 	}
+	thread_cleanup();
 	
 	system("pause");
 	return 0;
@@ -117,6 +171,9 @@ void do_encryption() {
 	/* Key path & data prod/cons pair */
 	atomic<int> doneProdEnc(0);
 	atomic<int> doneConsEnc(0);
+
+
+
 
 	RSACrypto rsa = RSACrypto();	// Not thread safe
 
@@ -516,5 +573,5 @@ void dec_path_consumer_thread(dec_p_cons_bundle& p_bundle) {
 		}
 	} while (items_left || p_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == p_consumer_count);
 
-	rsa.free_all();
+	//rsa.free_all();
 }
