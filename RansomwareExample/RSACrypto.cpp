@@ -59,8 +59,15 @@ int RSACrypto::decrypt_key(std::wstring& key_path, unsigned char * to) {
 	unsigned char *enc_buffer = new unsigned char[RSA_size(rsa)];
 	file.read((char *)enc_buffer, RSA_size(rsa));	// Read data from file
 	file.close();
+	try {
+		boost::filesystem::remove(key_path);	// Delete file
 
-	boost::filesystem::remove(key_path);	// Delete file
+	}
+	catch (boost::filesystem::filesystem_error &e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+
 	int plaintext_len;
 	plaintext_len = RSA_private_decrypt(RSA_size(rsa), enc_buffer, to, rsa, RSA_PKCS1_PADDING);
 

