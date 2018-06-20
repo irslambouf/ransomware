@@ -90,7 +90,7 @@ The following directory should be added to linker library paths:
 4. Add the boost include dir as mentioned above under Additional Include Directories
 > ex: C:\boost_1_64_0;C:\Program Files\OpenSSL\include;%(AdditionalIncludeDirectories)
 5. C/C++ > Code Generation
-6. Runtime Library set to Multi-threaded Debug (/MTd)
+6. Runtime Library set to Multi-threaded (/MT)
 7. Linker > General
 8. Add the boost lib dir as mentioned above under Additional Library Directories
 > ex: C:\Program Files\OpenSSL\lib;C:\boost_1_64_0\stage\lib
