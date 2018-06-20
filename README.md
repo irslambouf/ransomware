@@ -95,6 +95,7 @@ The following directory should be added to linker library paths:
 8. Add the boost lib dir as mentioned above under Additional Library Directories
 > ex: C:\Program Files\OpenSSL\lib;C:\boost_1_64_0\stage\lib
 
+NOT NEEDED
 Configure VS2017 for admin rights
 1. In Solution Explorer (top-right)
 2. right click project > Properties
